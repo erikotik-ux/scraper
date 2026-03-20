@@ -25,7 +25,7 @@
   --font-body:    'Inter', -apple-system, sans-serif;
   --font-heading: 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Inter', sans-serif;
 
-  --topbar-height: 64px;
+  --topbar-height: 80px;
   --filter-height: 56px;
 }
 
@@ -108,12 +108,11 @@ body {
 
 .topbar-title {
   font-family: var(--font-heading);
-  font-size: 26px;
+  font-size: 56px;
   font-weight: 700;
-  color: var(--accent);
+  color: #ffffff;
   letter-spacing: -0.03em;
   line-height: 1;
-  text-shadow: 0 0 40px rgba(33, 201, 208, 0.45), 0 0 12px rgba(33, 201, 208, 0.2);
 }
 
 .topbar-right {
@@ -551,5 +550,5 @@ body {
 @media (max-width: 600px) {
   .articles-grid { grid-template-columns: 1fr; }
   .date-display { display: none; }
-  .topbar-title { font-size: 20px; }
+  .topbar-title { font-size: 36px; }
 }
