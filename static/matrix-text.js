@@ -10,6 +10,7 @@ class MatrixText {
     this.initialDelay   = options.initialDelay   ?? parseInt(el.dataset.initialDelay   || '200');
     this.letterDuration = options.letterDuration  ?? parseInt(el.dataset.letterDuration || '500');
     this.letterInterval = options.letterInterval  ?? parseInt(el.dataset.letterInterval || '80');
+    this.repeatDelay    = options.repeatDelay     ?? parseInt(el.dataset.repeatDelay    || '6000');
 
     this._build();
     setTimeout(() => this._animate(), this.initialDelay);
@@ -33,7 +34,12 @@ class MatrixText {
   _animate() {
     let i = 0;
     const next = () => {
-      if (i >= this.spans.length) return;
+      if (i >= this.spans.length) {
+        // Animation complete — schedule the next loop
+        const totalDuration = (this.spans.length - 1) * this.letterInterval + this.letterDuration;
+        setTimeout(() => this._animate(), totalDuration + this.repeatDelay);
+        return;
+      }
       this._animateLetter(this.spans[i]);
       i++;
       setTimeout(next, this.letterInterval);

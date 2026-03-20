@@ -107,7 +107,7 @@ body {
 }
 
 .topbar-title {
-  font-family: var(--font-heading);
+  font-family: 'Courier New', Courier, monospace;
   font-size: 56px;
   font-weight: 700;
   color: #ffffff;
