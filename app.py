@@ -1,7 +1,30 @@
+import threading
 from flask import Flask, jsonify, render_template, send_file
-from aggregator import aggregate
+from aggregator import aggregate, load_cache_any, is_cache_stale
 
 app = Flask(__name__)
+
+_refresh_lock = threading.Lock()
+_refreshing = False
+
+
+def _background_refresh():
+    global _refreshing
+    with _refresh_lock:
+        if _refreshing:
+            return
+        _refreshing = True
+    try:
+        aggregate(force_refresh=True)
+        print("[BG] Cache refreshed successfully")
+    except Exception as e:
+        print(f"[BG] Refresh error: {e}")
+    finally:
+        _refreshing = False
+
+
+# Pre-warm cache on startup so first visitor never waits
+threading.Thread(target=_background_refresh, daemon=True).start()
 
 
 @app.route("/")
@@ -17,7 +40,13 @@ def logo():
 @app.route("/api/articles")
 def get_articles():
     try:
-        cache = aggregate(force_refresh=False)
+        cache = load_cache_any()
+        if cache is None:
+            # No cache at all — scrape synchronously (first ever cold start)
+            cache = aggregate(force_refresh=True)
+        elif is_cache_stale():
+            # Stale — return existing data immediately, refresh in background
+            threading.Thread(target=_background_refresh, daemon=True).start()
         return jsonify(cache)
     except Exception as e:
         return jsonify({"error": str(e), "articles": [], "last_scraped": None}), 500

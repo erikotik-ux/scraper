@@ -11,6 +11,7 @@ CACHE_TTL_HOURS = 24
 
 
 def load_cache():
+    """Return cache only if fresh (within TTL)."""
     if not os.path.exists(CACHE_FILE):
         return None
     try:
@@ -23,6 +24,30 @@ def load_cache():
     except Exception as e:
         print(f"[Cache] Load error: {e}")
         return None
+
+
+def load_cache_any():
+    """Return cache regardless of age. None only if file is missing/corrupt."""
+    if not os.path.exists(CACHE_FILE):
+        return None
+    try:
+        with open(CACHE_FILE, "r", encoding="utf-8", errors="replace") as f:
+            return json.load(f)
+    except Exception as e:
+        print(f"[Cache] Load error: {e}")
+        return None
+
+
+def is_cache_stale():
+    """True if cache is missing or older than TTL."""
+    cache = load_cache_any()
+    if not cache:
+        return True
+    try:
+        last = datetime.fromisoformat(cache["last_scraped"])
+        return datetime.now(timezone.utc) - last > timedelta(hours=CACHE_TTL_HOURS)
+    except Exception:
+        return True
 
 
 def save_cache(articles):
