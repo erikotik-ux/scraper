@@ -1,7 +1,24 @@
+import os
+import requests
 from flask import Flask, jsonify, render_template, send_file
 from aggregator import aggregate, load_cache_any, is_cache_stale
 
 app = Flask(__name__)
+
+MODAL_ARTICLES = os.environ.get("MODAL_ARTICLES_URL", "")
+MODAL_REFRESH  = os.environ.get("MODAL_REFRESH_URL", "")
+
+
+def _modal_get(url):
+    r = requests.get(url, timeout=10)
+    r.raise_for_status()
+    return r.json()
+
+
+def _modal_post(url):
+    r = requests.post(url, timeout=30)
+    r.raise_for_status()
+    return r.json()
 
 
 @app.route("/")
@@ -17,11 +34,11 @@ def logo():
 @app.route("/api/articles")
 def get_articles():
     try:
+        if MODAL_ARTICLES:
+            return jsonify(_modal_get(MODAL_ARTICLES))
         if is_cache_stale():
-            cache = aggregate(force_refresh=True)
-        else:
-            cache = load_cache_any()
-        return jsonify(cache)
+            return jsonify(aggregate(force_refresh=True))
+        return jsonify(load_cache_any())
     except Exception as e:
         return jsonify({"error": str(e), "articles": [], "last_scraped": None}), 500
 
@@ -29,8 +46,9 @@ def get_articles():
 @app.route("/api/refresh", methods=["POST"])
 def refresh_articles():
     try:
-        cache = aggregate(force_refresh=True)
-        return jsonify(cache)
+        if MODAL_REFRESH:
+            return jsonify(_modal_post(MODAL_REFRESH))
+        return jsonify(aggregate(force_refresh=True))
     except Exception as e:
         return jsonify({"error": str(e), "articles": [], "last_scraped": None}), 500
 
