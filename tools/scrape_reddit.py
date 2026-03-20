@@ -71,7 +71,7 @@ def scrape():
                     "tags": [f"r/{subreddit}"],
                 })
 
-            time.sleep(2)
+            time.sleep(0.5)
 
         except Exception as e:
             print(f"[Reddit] Error scraping r/{subreddit}: {e}")
