@@ -1,0 +1,20 @@
+Colors
+Primary:
+#D0D6E0
+Accent:
+#21c9d0
+Background:
+#08090A
+Text Primary:
+#D0D6E0
+Link:
+#21c9d0
+Fonts
+Inter(body)
+SF Pro Display(heading)
+Typography
+primary: Inter
+heading: SF Pro Display
+h1: 64px
+h2: 48px
+body: 15px
