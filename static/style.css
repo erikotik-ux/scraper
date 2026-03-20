@@ -25,7 +25,7 @@
   --font-body:    'Inter', -apple-system, sans-serif;
   --font-heading: 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Inter', sans-serif;
 
-  --topbar-height: 96px;
+  --topbar-height: 64px;
   --filter-height: 56px;
 }
 
@@ -88,7 +88,7 @@ body {
 }
 
 .logo {
-  height: 80px;
+  height: 48px;
   width: auto;
   object-fit: contain;
 }
