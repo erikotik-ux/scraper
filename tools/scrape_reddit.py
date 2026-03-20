@@ -1,13 +1,56 @@
-import html
-import requests
 import hashlib
-import time
+import feedparser
+from bs4 import BeautifulSoup
 from datetime import datetime, timezone, timedelta
 
 SUBREDDITS = ["artificial", "MachineLearning", "ChatGPT", "OpenAI"]
-HEADERS = {
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-}
+
+
+def _parse_entry(entry, subreddit, cutoff, seen_urls):
+    try:
+        pub = None
+        if hasattr(entry, "published_parsed") and entry.published_parsed:
+            pub = datetime(*entry.published_parsed[:6], tzinfo=timezone.utc)
+            if pub < cutoff:
+                return None
+
+        url = entry.get("link", "")
+        if not url or url in seen_urls:
+            return None
+        seen_urls.add(url)
+
+        # Extract thumbnail and clean summary from HTML content
+        thumbnail = None
+        summary = ""
+        raw_html = ""
+        if hasattr(entry, "content") and entry.content:
+            raw_html = entry.content[0].get("value", "")
+        elif hasattr(entry, "summary"):
+            raw_html = entry.summary
+
+        if raw_html:
+            soup = BeautifulSoup(raw_html, "html.parser")
+            img = soup.find("img")
+            if img and img.get("src") and "redditstatic" not in img["src"]:
+                thumbnail = img["src"]
+            summary = soup.get_text(separator=" ").strip()[:300]
+
+        article_id = hashlib.md5(url.encode()).hexdigest()[:12]
+
+        return {
+            "id": article_id,
+            "source": "reddit",
+            "source_display": f"r/{subreddit}",
+            "title": entry.get("title", "").strip(),
+            "summary": summary or f"r/{subreddit}",
+            "url": url,
+            "published_at": pub.isoformat() if pub else datetime.now(timezone.utc).isoformat(),
+            "scraped_at": datetime.now(timezone.utc).isoformat(),
+            "thumbnail": thumbnail,
+            "tags": [f"r/{subreddit}"],
+        }
+    except Exception:
+        return None
 
 
 def scrape():
@@ -17,62 +60,14 @@ def scrape():
 
     for subreddit in SUBREDDITS:
         try:
-            url = f"https://www.reddit.com/r/{subreddit}/new.json?limit=25"
-            resp = requests.get(url, headers=HEADERS, timeout=10)
-            resp.raise_for_status()
-            data = resp.json()
-
-            for post in data["data"]["children"]:
-                p = post["data"]
-
-                created = datetime.fromtimestamp(p["created_utc"], tz=timezone.utc)
-                if created < cutoff:
-                    continue
-
-                post_url = f"https://www.reddit.com{p['permalink']}"
-                if post_url in seen_urls:
-                    continue
-                seen_urls.add(post_url)
-
-                article_id = hashlib.md5(post_url.encode()).hexdigest()[:12]
-
-                # Prefer high-res preview image over small thumbnail
-                thumbnail = None
-                preview = p.get("preview", {})
-                preview_images = preview.get("images", [])
-                if preview_images:
-                    resolutions = preview_images[0].get("resolutions", [])
-                    source = preview_images[0].get("source", {})
-                    # Pick a medium resolution (~640px) if available, else use source
-                    mid = next((r for r in resolutions if r.get("width", 0) >= 640), source)
-                    raw_url = mid.get("url", "")
-                    if raw_url:
-                        thumbnail = html.unescape(raw_url)
-
-                # Fallback to thumbnail field
-                if not thumbnail:
-                    raw_thumb = p.get("thumbnail", "")
-                    if raw_thumb and raw_thumb not in ("self", "default", "nsfw", "spoiler", "image") and raw_thumb.startswith("http"):
-                        thumbnail = html.unescape(raw_thumb)
-
-                selftext = p.get("selftext", "").strip()
-                summary = selftext[:300] if selftext else f"{p.get('score', 0)} upvotes · r/{subreddit}"
-
-                articles.append({
-                    "id": article_id,
-                    "source": "reddit",
-                    "source_display": f"r/{subreddit}",
-                    "title": p.get("title", "").strip(),
-                    "summary": summary,
-                    "url": p.get("url", post_url),
-                    "published_at": created.isoformat(),
-                    "scraped_at": datetime.now(timezone.utc).isoformat(),
-                    "thumbnail": thumbnail,
-                    "tags": [f"r/{subreddit}"],
-                })
-
-            time.sleep(0.5)
-
+            feed = feedparser.parse(
+                f"https://www.reddit.com/r/{subreddit}/new.rss?limit=25",
+                agent="Mozilla/5.0 (compatible; news-aggregator/1.0)",
+            )
+            for entry in feed.entries:
+                article = _parse_entry(entry, subreddit, cutoff, seen_urls)
+                if article:
+                    articles.append(article)
         except Exception as e:
             print(f"[Reddit] Error scraping r/{subreddit}: {e}")
             continue
