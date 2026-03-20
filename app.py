@@ -28,7 +28,7 @@ def index():
 
 @app.route("/logo")
 def logo():
-    return send_file("DesignGuidelines/Neatly_Logo.png", mimetype="image/png")
+    return send_file("DesignGuidelines/pulse_logo.png", mimetype="image/png")
 
 
 @app.route("/api/articles")
