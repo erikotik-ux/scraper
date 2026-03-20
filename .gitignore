@@ -17,9 +17,7 @@ env/
 # Cache data (ephemeral, not committed)
 .tmp/
 
-# Node / frontend experiments (not part of the Flask app)
-frontend/
-components/
+# Node
 node_modules/
 
 # Claude Code
